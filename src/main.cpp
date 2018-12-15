@@ -240,6 +240,7 @@ int main() {
           	json msgJson;
 
 
+          	/*
           	vector<double> next_x_vals;
           	vector<double> next_y_vals;
 
@@ -249,9 +250,10 @@ int main() {
                   next_x_vals.push_back(car_x+(dist_inc*i)*cos(deg2rad(car_yaw)));
                   next_y_vals.push_back(car_y+(dist_inc*i)*sin(deg2rad(car_yaw)));
             }
+			*/
 
 
-          	/*
+
             vector<double> next_x_vals;
             vector<double> next_y_vals;
 
@@ -290,7 +292,7 @@ int main() {
                 pos_x += (dist_inc)*cos(angle+(i+1)*(pi()/100));
                 pos_y += (dist_inc)*sin(angle+(i+1)*(pi()/100));
             }
-            */
+
 
 
             msgJson["next_x"] = next_x_vals;
