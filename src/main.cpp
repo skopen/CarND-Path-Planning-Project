@@ -252,6 +252,44 @@ vector<vector<double>> getXYTrajectory(vector<double> srcS, vector<double> dstS,
 	return traj;
 }
 
+bool isLaneSafe(nlohmann::basic_json<>& sensor_fusion, double car_s, int prev_size, int xLane, bool forLaneChange, double& proximity)
+{
+  	// find ref_v to use
+  	for (int i = 0; i < sensor_fusion.size(); i++)
+  	{
+  		// car is in my lane
+  		float d = sensor_fusion[i][6];
+  		if (d < (2 + 4*xLane + 2) && d > (2 + 4*xLane - 2))
+  		{
+  			double vx = sensor_fusion[i][3];
+  			double vy = sensor_fusion[i][4];
+  			double check_speed = sqrt(vx*vx + vy*vy);
+  			double check_car_s = sensor_fusion[i][5];
+
+	  		if (forLaneChange && fabs(check_car_s - car_s) < 30)
+	  		{
+	  			return false;
+	  		}
+
+			check_car_s += ((double)prev_size*0.02*check_speed); // if using previous points can project s value out
+
+			// check s values greater than min and s gap
+			if ((check_car_s > car_s) && ((check_car_s - car_s) < 30))
+			{
+				proximity = check_car_s - car_s;
+				return false;
+			}
+
+	  		if (forLaneChange && fabs(check_car_s - car_s) < 30)
+	  		{
+	  			return false;
+	  		}
+  		}
+
+  	}
+
+  	return true;
+}
 
 
 int main() {
@@ -332,110 +370,6 @@ int main() {
 
           	json msgJson;
 
-
-//===========================================================================================================
-
-          	/*
-          	vector<double> next_x_vals;
-          	vector<double> next_y_vals;
-
-            double dist_inc = 0.05;
-            for(int i = 0; i < 50; i++)
-            {
-                  next_x_vals.push_back(car_x+(dist_inc*i)*cos(deg2rad(car_yaw)));
-                  next_y_vals.push_back(car_y+(dist_inc*i)*sin(deg2rad(car_yaw)));
-            }
-			*/
-
-            /*
-          	vector<double> next_x_vals;
-          	vector<double> next_y_vals;
-            double pos_x;
-            double pos_y;
-            double angle;
-            int path_size = previous_path_x.size();
-
-            for(int i = 0; i < path_size; i++)
-            {
-                next_x_vals.push_back(previous_path_x[i]);
-                next_y_vals.push_back(previous_path_y[i]);
-            }
-
-            if(path_size == 0)
-            {
-                pos_x = car_x;
-                pos_y = car_y;
-                angle = deg2rad(car_yaw);
-            }
-            else
-            {
-                pos_x = previous_path_x[path_size-1];
-                pos_y = previous_path_y[path_size-1];
-
-                double pos_x2 = previous_path_x[path_size-2];
-                double pos_y2 = previous_path_y[path_size-2];
-                angle = atan2(pos_y-pos_y2,pos_x-pos_x2);
-            }
-
-            double dist_inc = 0.5;
-            for(int i = 0; i < 50-path_size; i++)
-            {
-                next_x_vals.push_back(pos_x+(dist_inc)*cos(angle+(i+1)*(pi()/100)));
-                next_y_vals.push_back(pos_y+(dist_inc)*sin(angle+(i+1)*(pi()/100)));
-                pos_x += (dist_inc)*cos(angle+(i+1)*(pi()/100));
-                pos_y += (dist_inc)*sin(angle+(i+1)*(pi()/100));
-            }
-            */
-
-//===========================================================================================================
-
-          	/*
-          	double SPEED_LIM_M_PER_S = (50 * 1609.344)/3600;
-
-            vector<double> next_x_vals;
-            vector<double> next_y_vals;
-            double angle = deg2rad(car_yaw);
-
-            vector<double> currCoordFN = getFrenet(car_x, car_y, angle, map_waypoints_x, map_waypoints_y);
-
-            int nextWP = NextWaypoint(car_x, car_y, angle, map_waypoints_x, map_waypoints_y);
-
-            vector<double> destCoordFN = {map_waypoints_s[nextWP],  currCoordFN[1]};
-
-            double sTravelled = fabs(destCoordFN[0] - currCoordFN[0]);
-
-            double timeToDest = sTravelled / SPEED_LIM_M_PER_S;
-
-            cout << "Distance to next waypoint: " << sTravelled << "; Time to next waypoint: " << timeToDest << endl;
-
-            vector<double> startS = {car_s, car_speed, 0.0};
-            vector<double> endS = {destCoordFN[0], SPEED_LIM_M_PER_S, 0.0};
-
-
-            vector<double> startD = {car_d, 0.0, 0.0};
-            vector<double> endD = {6, 0.0, 0.0};
-
-            vector<vector<double>> traj = getXYTrajectory(startS, endS, startD, endD, timeToDest, map_waypoints_s, map_waypoints_x, map_waypoints_y);
-
-            next_x_vals = traj[0];
-            next_y_vals = traj[1];
-			*/
-
-//            cout << car_x << ", " << car_y << ", " << car_yaw << endl;
-//            cout << fnCoord[0] << ", " << fnCoord[1] << endl;
-//            cout << nextWP << endl;
-//
-//            double dist_inc = 0.2;
-//            for(int i = 0; i < 500; i++)
-//            {
-//            	  double new_x = car_x+(dist_inc*i)*cos(deg2rad(car_yaw));
-//            	  double new_y = car_y+(dist_inc*i)*sin(deg2rad(car_yaw));
-//                  next_x_vals.push_back(new_x);
-//                  next_y_vals.push_back(new_y);
-//            }
-
-//===========================================================================================================
-
           	int prev_size = previous_path_x.size();
 
 
@@ -445,40 +379,82 @@ int main() {
           	}
 
           	bool too_close = false;
+          	double proximity = 0;
 
-          	// find ref_v to use
-          	for (int i = 0; i < sensor_fusion.size(); i++)
+          	bool safe = isLaneSafe(sensor_fusion, car_s, prev_size, lane, false, proximity);
+          	bool laneChanged = false;
+
+          	if (!safe)
           	{
-          		// car is in my lane
-          		float d = sensor_fusion[i][6];
-          		if (d < (2 + 4*lane + 2) && d > (2 + 4*lane - 2))
+          		if (lane == 1)
           		{
-          			double vx = sensor_fusion[i][3];
-          			double vy = sensor_fusion[i][4];
-          			double check_speed = sqrt(vx*vx + vy*vy);
-          			double check_car_s = sensor_fusion[i][5];
-
-  	  	  	  	  	check_car_s += ((double)prev_size*0.02*check_speed); // if using previous points can project s value out
-
-  	  	  	  	  	// check s values greater than min and s gap
-  	  	  	  	  	if ((check_car_s > car_s) && ((check_car_s - car_s) < 30))
-  	  	  	  	  	{
-  	  	  	  	  		// DO some logic here, lower reference velocity so we don't crash into the car infront of us, could
-  	  	  	  	  		// also flag to try to change langes.
-  	  	  	  	  		//ref_vel = 29.5; //mph
-  	  	  	  	  		too_close = true;
-
-  	  	  	  	  		if (lane > 0)
-  	  	  	  	  		{
-  	  	  	  	  			lane = 0;
-  	  	  	  	  		}
-  	  	  	  	  	}
+          			safe = isLaneSafe(sensor_fusion, car_s, prev_size, lane - 1, true, proximity);
+          			if (!safe)
+          			{
+          				safe = isLaneSafe(sensor_fusion, car_s, prev_size, lane + 1, true, proximity);
+          				if (!safe)
+          				{
+          					too_close = true;
+          				}
+          				else
+          				{
+          					lane = lane + 1;
+          					laneChanged = true;
+          				}
+          			}
+          			else
+          			{
+          				lane = lane - 1;
+          				laneChanged = true;
+          			}
+          		}
+          		else if (lane == 0)
+          		{
+          			safe = isLaneSafe(sensor_fusion, car_s, prev_size, lane + 1, true, proximity);
+          			if (!safe)
+          			{
+          				too_close = true;
+          			}
+          			else
+          			{
+          				lane = lane + 1;
+          				laneChanged = true;
+          			}
+          		}
+          		else if (lane == 2)
+          		{
+          			safe = isLaneSafe(sensor_fusion, car_s, prev_size, lane - 1, true, proximity);
+          			if (!safe)
+          			{
+          				too_close = true;
+          			}
+          			else
+          			{
+          				lane = lane - 1;
+          				laneChanged = true;
+          			}
           		}
           	}
 
+          	// try to maintain center lane to have the best chance of navigating traffic
+//          	if (!laneChanged && lane != 1)
+//          	{
+//          		bool safe = isLaneSafe(sensor_fusion, car_s, prev_size, 1, true, proximity);
+//          		if (safe)
+//          		{
+//          			lane = 1;
+//          		}
+//          	}
+
+          	// proximity can go from 0 to 30, lets say...
           	if (too_close)
           	{
-          		ref_vel -= .224;
+          		if (proximity < 1)
+          		{
+          			proximity = 1.0;
+          		}
+
+          		ref_vel -= .224 * (1 + 1/proximity);
           	}
           	else if (ref_vel < 49.5)
           	{
