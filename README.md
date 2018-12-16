@@ -14,7 +14,8 @@ The next task is to identify waypoints on the spline that the simulator can use 
 #### 3. Generating trajectory using Spline waypoints
 The task of generating trajectory is relatively simple. Here first the the trajectory is populated with previously generated unused path (to maintain continuity) and the newly generated spline points are added. Since we were working with spline points in the car's coordinate frame, we need to first map those points to the map's coordinate frame. This is inverse of the transformation performed in part 1 above. This fully populate trajectory is then sent to the Simulator to work with in the next cycle.
 
-
+### Output Video
+The output video can be found [here](https://www.youtube.com/watch?v=d-T5Umm9OAg&t=19s).
 
 ## Original assignment problem statement follows below (unchanged)
 
