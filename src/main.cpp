@@ -266,7 +266,7 @@ bool isLaneSafe(nlohmann::basic_json<>& sensor_fusion, double car_s, int prev_si
   			double check_speed = sqrt(vx*vx + vy*vy);
   			double check_car_s = sensor_fusion[i][5];
 
-	  		if (forLaneChange && fabs(check_car_s - car_s) < 30)
+	  		if (forLaneChange && fabs(check_car_s - car_s) < 10) // 30 is stable
 	  		{
 	  			return false;
 	  		}
@@ -280,7 +280,7 @@ bool isLaneSafe(nlohmann::basic_json<>& sensor_fusion, double car_s, int prev_si
 				return false;
 			}
 
-	  		if (forLaneChange && fabs(check_car_s - car_s) < 30)
+	  		if (forLaneChange && fabs(check_car_s - car_s) < 10)  // 30 is stable
 	  		{
 	  			return false;
 	  		}
@@ -451,18 +451,21 @@ int main() {
           	{
           		if (proximity < 1)
           		{
-          			proximity = 1.0;
+          			proximity = 1;
           		}
 
           		ref_vel -= .224 * (1 + 1/proximity);
           	}
           	else if (ref_vel < 49.5)
           	{
-          		ref_vel += .224;
+          		double factor = ref_vel;
+          		if (ref_vel < 10)
+          		{
+          			factor = 10;
+          		}
 
+          		ref_vel += .224 * (49.5/factor);
           	}
-
-
 
           	// create a list of widely spaced (x, y) waypoints, evenly spaced at 30m
           	// Later we will interpolate these waypoints with a spline and fill it in with more points that control speed.
@@ -557,9 +560,10 @@ int main() {
 
           	// fill up the rest of our path planner after filling it with previous points, here we will always output 50 points
 
+          	double N = (target_dist/(.02*ref_vel/2.24));
+
           	for (int i = 1; i <= 50 - previous_path_x.size(); i++)
           	{
-          		double N = (target_dist/(.02*ref_vel/2.24));
           		double x_point = x_add_on + target_x/N;
   	  	  	  	double y_point = s(x_point);
 
@@ -578,8 +582,6 @@ int main() {
   	  	  	  	next_x_vals.push_back(x_point);
   	  	  	  	next_y_vals.push_back(y_point);
           	}
-
-
 
           	// TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
          	msgJson["next_x"] = next_x_vals;

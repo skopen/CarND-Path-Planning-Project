@@ -8,10 +8,15 @@ I implemented path generation using Splines. Path generation is broken into 3 pa
 The spline is built using 5 reference points. The first two reference points can be either the current location and a sample projected previous location based on the yaw angle
 of the car or the previous two points reported by the Simulator. In the latter case, the yaw angle is calculated based on the last two points used (using arctan). Then we add three additional points, which are 30m, 60m and 90m away (s-distance). These are the points in the future that the car may traverse. Please note that these long term projections for points take into considerations, any decision around lane change because the lane information is factored using the Frenet coordinates. The Frenet coordinates are then mapped back into the map coordinate plane. These 5 points are then translated to a new coordinate frame, that matches current car position for origin and the car's heading as the x-axis. This is done so as to make the calculations easier. These 5 points parameterize the Spline in the vehicle's coordinates.
 
-#### 2. Generating points on the Spline to meet reference Speed needs
+#### 2. Generating waypoints on the Spline to meet reference Speed needs
 The next task is to identify waypoints on the spline that the simulator can use such that traversing from one point to the next one is in 0.02 seconds, will be equivalent to driving in the right direction at about the speed that the vehicle is driving. This speed limit can at maximum be the speed limit of the road, but it can be lower than that if the road conditions (traffic) do not allow for a higher speed. So the task is to identify the right spacing of the points on the spline. This is done by approximating the spline as a line, so it forms a triangle with the coordinate axes. The main idea behind this simplification is to avoid taking line integrals along the spline to split it into multiple points. But using a triangle it is possible to simplify the math by using nominal properties of similar triangles. So the rough splitting of the linear approximation maps to linear splitting of the x-axis side of the triangle. The split points on the x-axis are used the calculate the actual points on the spline using the spline function.
 
-#### 3. Mapping the Spline back on the Road
+#### 3. Generating trajectory using Spline waypoints
+The task of generating trajectory is relatively simple. Here first the the trajectory is populated with previously generated unused path (to maintain continuity) and the newly generated spline points are added. Since we were working with spline points in the car's coordinate frame, we need to first map those points to the map's coordinate frame. This is inverse of the transformation performed in part 1 above. This fully populate trajectory is then sent to the Simulator to work with in the next cycle.
+
+
+
+## Original assignment problem statement follows below (unchanged)
 
 
 ### Simulator.
